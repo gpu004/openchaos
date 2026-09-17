@@ -29,3 +29,4 @@ Living vocabulary for the codebase. Prefer these terms in modules, ADRs, and doc
 1. Language packages never reimplement clock, scheduler, world, seed stream, or meters.
 2. Core never depends on Hegel or on `lang/*`.
 3. Demos/examples call the lang adapter + core; they are not core depth.
+4. Do not re-export demo entrypoints from `lang/*/src/lib.rs`.

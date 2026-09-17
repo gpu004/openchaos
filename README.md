@@ -23,12 +23,15 @@ thin-adapter pattern.
 cargo test
 cargo test -p openchaos-core
 cargo test -p openchaos
+cargo run -p openchaos --example sim_bench
+cargo run -p openchaos --example lru_capacity
 ```
 
 | Package | Path | Owns |
 | --- | --- | --- |
 | `openchaos-core` | `crates/openchaos-core` | Sim + meters (deep) |
-| `openchaos` | `lang/rust` | Thin Rust bindings (+ Hegel adapter) |
+| `openchaos` | `lang/rust` | Thin Rust bindings + Hegel `bind` adapter |
+| examples | `examples/`, `lang/rust/examples/` | Quarantined demos (not core depth) |
 
 ## License
 
