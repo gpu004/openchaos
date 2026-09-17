@@ -14,8 +14,9 @@ Living vocabulary for the codebase. Prefer these terms in modules, ADRs, and doc
 | **SimRng** | Core-owned PRNG stream derived from a seed (xoshiro128**-style). |
 | **Clock** | Logical (not wall) time used by the scheduler. |
 | **Scheduler** | Priority queue of timed **opaque payloads** (no host closures). |
+| **EventHandler / RunLimit** | External handler + drive limits; handlers never live on the queue. |
 | **TimedEvent** | `(at, id, payload)` delivered by `SimWorld::step`. |
-| **run_until / handler** | External handler seam: payloads leave the queue; handlers may reschedule. |
+| **run_until / run_with** | Drive seam: payloads leave the queue; handlers may reschedule. |
 | **Meter / Span / bench_sim** | CodSpeed-inspired logical instruments owned by core. |
 | **Seam** | Stable interface at a package or module boundary (core ↔ lang). |
 | **Adapter** | Thin code in a language package that calls across a seam. |

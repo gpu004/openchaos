@@ -6,12 +6,14 @@
 
 mod clock;
 mod rng;
+mod run;
 mod scheduler;
 mod seed;
 mod world;
 
 pub use clock::Clock;
 pub use rng::SimRng;
+pub use run::{EventHandler, RunLimit, RunSummary};
 pub use scheduler::{EventId, Scheduler, TimedEvent};
 pub use seed::Seed;
 pub use world::SimWorld;

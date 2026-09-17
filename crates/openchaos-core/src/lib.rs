@@ -21,4 +21,6 @@ pub mod instrument;
 pub mod sim;
 
 pub use instrument::{bench_sim, Meter, RegionStats, SimReport, Span};
-pub use sim::{Clock, EventId, Seed, SimRng, SimWorld, TimedEvent};
+pub use sim::{
+    Clock, EventHandler, EventId, RunLimit, RunSummary, Seed, SimRng, SimWorld, TimedEvent,
+};
