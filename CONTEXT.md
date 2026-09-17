@@ -7,6 +7,8 @@ Living vocabulary for the codebase. Prefer these terms in modules, ADRs, and doc
 | **Core** | `openchaos-core` — the single deep simulation implementation. |
 | **Language package** | Thin `lang/<x>` package: Hegel client for `x` + bindings to core. |
 | **lang/rust** | Crate `openchaos` — thin in-process adapter over `openchaos-core` (not a second sim). |
+| **bind** | `openchaos::bind` — maps Hegel `TestCase` draws onto core `Seed` / `SimWorld`. |
+| **hegel / hegeltest** | Official Hegel Rust client (Cargo package `hegeltest`, crate name `hegel`). |
 | **SimWorld** | Deterministic discrete-event world: seed, clock, payload scheduler, meters, trace. |
 | **Seed** | `u64` that fully determines a sim (and, via Hegel, a property example). |
 | **SimRng** | Core-owned PRNG stream derived from a seed (xoshiro128**-style). |

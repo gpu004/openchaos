@@ -1,45 +1,12 @@
-//! Seeded deterministic PRNG (xoshiro128** style, compact).
+//! Seeded deterministic PRNG owned by openchaos-core.
+//!
+//! Algorithm: xoshiro128** with SplitMix64-style seeding from [`Seed`].
+//! Language packages must draw entropy only through this stream (or an FFI
+//! that wraps it) — never a peer implementation with a different algorithm.
 
-use std::fmt;
+use super::seed::Seed;
 
-/// 64-bit seed that fully determines a simulation or PBT run.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Seed(u64);
-
-impl Seed {
-    /// Construct from an explicit value.
-    pub const fn new(value: u64) -> Self {
-        Self(value)
-    }
-
-    /// Raw seed bits.
-    pub const fn get(self) -> u64 {
-        self.0
-    }
-
-    /// Derive a child seed (for nested subsystems) without mutating this one.
-    pub fn derive(self, salt: u64) -> Self {
-        // SplitMix64-style mix — deterministic, avalanche-friendly.
-        let mut z = self.0.wrapping_add(salt).wrapping_add(0x9E3779B97F4A7C15);
-        z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
-        z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
-        Self(z ^ (z >> 31))
-    }
-}
-
-impl fmt::Display for Seed {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:#018x}", self.0)
-    }
-}
-
-impl From<u64> for Seed {
-    fn from(value: u64) -> Self {
-        Self(value)
-    }
-}
-
-/// Deterministic pseudo-random generator used by sims and PBT draws.
+/// Deterministic pseudo-random generator used by sims.
 #[derive(Debug, Clone)]
 pub struct SimRng {
     s: [u32; 4],
@@ -86,6 +53,17 @@ impl SimRng {
         let hi = self.next_u32() as u64;
         let lo = self.next_u32() as u64;
         (hi << 32) | lo
+    }
+
+    /// Fill `buf` with bytes from the stream (little-endian `u32` chunks).
+    pub fn fill_bytes(&mut self, buf: &mut [u8]) {
+        let mut i = 0;
+        while i < buf.len() {
+            let word = self.next_u32().to_le_bytes();
+            let take = (buf.len() - i).min(4);
+            buf[i..i + take].copy_from_slice(&word[..take]);
+            i += take;
+        }
     }
 
     /// Uniform value in `0..bound` (exclusive). Returns 0 if `bound == 0`.
@@ -157,5 +135,24 @@ mod tests {
         for _ in 0..1000 {
             assert!(rng.gen_range(10) < 10);
         }
+    }
+
+    #[test]
+    fn golden_first_u64_for_seed_1() {
+        // Contract vector for foreign language adapters verifying the same stream.
+        let mut rng = SimRng::from_seed(Seed::new(1));
+        assert_eq!(rng.next_u64(), 0x7577_4b6f_c706_f13a);
+    }
+
+    #[test]
+    fn fill_bytes_matches_u32_le_chunks() {
+        let mut rng = SimRng::from_seed(Seed::new(3));
+        let mut buf = [0u8; 6];
+        rng.fill_bytes(&mut buf);
+        let mut rng2 = SimRng::from_seed(Seed::new(3));
+        let w0 = rng2.next_u32().to_le_bytes();
+        let w1 = rng2.next_u32().to_le_bytes();
+        assert_eq!(&buf[..4], &w0);
+        assert_eq!(&buf[4..], &w1[..2]);
     }
 }

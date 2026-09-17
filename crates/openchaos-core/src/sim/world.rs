@@ -1,9 +1,10 @@
 //! Replayable simulation world: clock + scheduler + seed.
 
 use crate::instrument::Meter;
-use crate::sim::clock::Clock;
-use crate::sim::rng::{Seed, SimRng};
-use crate::sim::scheduler::{EventId, Scheduler, TimedEvent};
+use super::clock::Clock;
+use super::rng::SimRng;
+use super::scheduler::{EventId, Scheduler, TimedEvent};
+use super::seed::Seed;
 
 /// A deterministic discrete-event world.
 ///
