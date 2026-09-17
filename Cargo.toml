@@ -2,9 +2,11 @@
 resolver = "2"
 members = [
     "crates/openchaos-core",
+    "lang/rust",
 ]
 default-members = [
     "crates/openchaos-core",
+    "lang/rust",
 ]
 
 [workspace.package]

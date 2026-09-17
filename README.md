@@ -22,7 +22,13 @@ thin-adapter pattern.
 ```bash
 cargo test
 cargo test -p openchaos-core
+cargo test -p openchaos
 ```
+
+| Package | Path | Owns |
+| --- | --- | --- |
+| `openchaos-core` | `crates/openchaos-core` | Sim + meters (deep) |
+| `openchaos` | `lang/rust` | Thin Rust bindings (+ Hegel adapter) |
 
 ## License
 

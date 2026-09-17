@@ -1,0 +1,15 @@
+[package]
+name = "openchaos"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Thin Rust language package: bindings to openchaos-core (+ Hegel adapter)"
+readme = "README.md"
+keywords = ["simulation", "property-based-testing", "hegel", "deterministic"]
+categories = ["development-tools::testing", "simulation"]
+
+[dependencies]
+openchaos-core = { path = "../../crates/openchaos-core" }
+
+[dev-dependencies]
