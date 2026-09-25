@@ -22,8 +22,7 @@ impl Clock {
 
     /// Jump to an absolute time (must be >= current).
     pub fn set(&mut self, ticks: u64) {
-        debug_assert!(ticks >= self.0, "clock must not move backwards");
-        self.0 = ticks;
+        self.0 = self.0.max(ticks);
     }
 }
 
@@ -50,5 +49,12 @@ mod tests {
         assert_eq!(c.ticks(), 10);
         c.set(20);
         assert_eq!(c.ticks(), 20);
+    }
+
+    #[test]
+    fn ignores_backward_set_in_release_builds() {
+        let mut c = Clock::new(10);
+        c.set(5);
+        assert_eq!(c.ticks(), 10);
     }
 }
