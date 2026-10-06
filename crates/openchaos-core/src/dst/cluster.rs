@@ -52,6 +52,7 @@ pub struct Cluster<N: Node> {
 
 impl<N: Node> Cluster<N> {
     /// Builds the cluster, draws each node's clock, then calls [`Node::on_start`] in id order.
+    #[must_use]
     pub fn new(seed: Seed, config: SimConfig, nodes: Vec<N>) -> Self {
         let mut world = SimWorld::new(seed);
         let slots = nodes
@@ -71,7 +72,7 @@ impl<N: Node> Cluster<N> {
             next_msg: 0,
         };
         for id in cluster.ids() {
-            cluster.invoke(id, |node, ctx| node.on_start(ctx));
+            cluster.invoke(id, N::on_start);
         }
         cluster
     }
@@ -195,7 +196,7 @@ impl<N: Node> Cluster<N> {
             &Fault::Restart(id) => {
                 if !self.is_up(id) {
                     self.slots[id.index()].up = true;
-                    self.invoke(id, |node, ctx| node.on_restart(ctx));
+                    self.invoke(id, N::on_restart);
                 }
             }
         }
@@ -225,9 +226,25 @@ impl<N: Node> Cluster<N> {
             Err(reason) => self.trace.push(TraceEntry::Drop { at, msg, reason }),
             Ok((first, duplicate)) => {
                 if let Some(again) = duplicate {
-                    self.queue(again, Event::Deliver { from, to, msg, payload: payload.clone() });
+                    self.queue(
+                        again,
+                        Event::Deliver {
+                            from,
+                            to,
+                            msg,
+                            payload: payload.clone(),
+                        },
+                    );
                 }
-                self.queue(first, Event::Deliver { from, to, msg, payload });
+                self.queue(
+                    first,
+                    Event::Deliver {
+                        from,
+                        to,
+                        msg,
+                        payload,
+                    },
+                );
             }
         }
     }
@@ -238,7 +255,14 @@ impl<N: Node> Cluster<N> {
         let target = slot.clock.local(now).after(delay);
         let at = slot.clock.global_at(target, now);
         let incarnation = slot.incarnation;
-        self.queue(at, Event::Timer { node, tag, incarnation });
+        self.queue(
+            at,
+            Event::Timer {
+                node,
+                tag,
+                incarnation,
+            },
+        );
     }
 
     fn queue(&mut self, at: Clock, event: Event<N::Msg>) {

@@ -44,7 +44,7 @@ impl NodeClock {
     /// Earliest global time at or after `now` whose local reading is at least `target`.
     pub(crate) fn global_at(self, target: Clock, now: Clock) -> Clock {
         let needed = i128::from(target.ticks()) - self.skew;
-        let global = if needed <= 0 {
+        let global = if needed <= 0 || target == Clock::default() {
             0
         } else {
             (needed * PPM + self.rate_ppm - 1).div_euclid(self.rate_ppm)

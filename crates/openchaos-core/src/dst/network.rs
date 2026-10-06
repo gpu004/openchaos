@@ -91,7 +91,6 @@ impl Network {
             .is_some_and(|side| side.contains(&a) != side.contains(&b))
     }
 
-    /// Arrival times of the message and its duplicate, if any.
     pub(crate) fn transit(
         &mut self,
         from: NodeId,
@@ -106,8 +105,8 @@ impl Network {
             return Err(DropReason::Lost);
         }
         let first = self.arrival(from, to, now, rng);
-        let duplicate =
-            chance(rng, self.config.duplicate_per_million).then(|| self.arrival(from, to, now, rng));
+        let duplicate = chance(rng, self.config.duplicate_per_million)
+            .then(|| self.arrival(from, to, now, rng));
         Ok((first, duplicate))
     }
 
@@ -123,7 +122,10 @@ impl Network {
         if self.config.reorder {
             return at;
         }
-        let at = self.last_arrival.get(&link).map_or(at, |&last| at.max(last));
+        let at = self
+            .last_arrival
+            .get(&link)
+            .map_or(at, |&last| at.max(last));
         self.last_arrival.insert(link, at);
         at
     }

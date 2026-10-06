@@ -48,6 +48,7 @@ pub trait Node {
     }
 }
 
+#[derive(Debug)]
 pub(crate) enum Effect<M> {
     Send { to: NodeId, msg: M },
     Timer { delay: u64, tag: u64 },
@@ -61,15 +62,6 @@ pub struct Ctx<'a, M> {
     nodes: u32,
     rng: &'a mut SimRng,
     effects: Vec<Effect<M>>,
-}
-
-impl<M> core::fmt::Debug for Effect<M> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Send { to, .. } => write!(f, "Send({})", to.0),
-            Self::Timer { delay, tag } => write!(f, "Timer({delay}, {tag})"),
-        }
-    }
 }
 
 impl<'a, M> Ctx<'a, M> {
@@ -99,9 +91,10 @@ impl<'a, M> Ctx<'a, M> {
         self.now
     }
 
-    /// All node ids in the cluster, in order.
-    pub fn nodes(&self) -> impl Iterator<Item = NodeId> {
-        (0..self.nodes).map(NodeId)
+    /// Number of nodes in the cluster. Ids run from 0 to `node_count() - 1`.
+    #[must_use]
+    pub fn node_count(&self) -> u32 {
+        self.nodes
     }
 
     /// The world's RNG.

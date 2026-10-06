@@ -1,7 +1,8 @@
 # openchaos (Rust)
 
 Re-exports [`openchaos-core`](../../crates/openchaos-core) and adds
-`draw_seed` / `draw_world`, which draw a seed from a Hegel test case.
+`draw_seed` / `draw_world`, which draw a seed from a Hegel test case, and
+`draw_sim_config`, which draws a `SimConfig` for a `Cluster`.
 
 ```rust
 use hegel::TestCase;
