@@ -4,7 +4,7 @@ use anyhow::{bail, ensure, Context, Result};
 use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const VALGRIND_ARGS: &[&str] = &[
@@ -43,7 +43,10 @@ pub fn measure(command: &[OsString], out_dir: &Path) -> Result<Report> {
     ensure!(!command.is_empty(), "no command to run");
     let valgrind = valgrind_version()?;
     fs::create_dir_all(out_dir)?;
-    for path in output_files(out_dir)? {
+    for path in files_with_extension(out_dir, "out")?
+        .into_iter()
+        .chain(files_with_extension(out_dir, "log")?)
+    {
         fs::remove_file(path)?;
     }
 
@@ -64,19 +67,14 @@ pub fn measure(command: &[OsString], out_dir: &Path) -> Result<Report> {
         .status()
         .context("failed to start setarch")?;
     if !status.success() {
-        for path in output_files(out_dir)? {
-            if path.extension().is_some_and(|e| e == "log") {
-                eprint!("{}", fs::read_to_string(&path).unwrap_or_default());
-            }
+        for path in files_with_extension(out_dir, "log")? {
+            eprint!("{}", fs::read_to_string(&path).unwrap_or_default());
         }
         bail!("benchmark command failed: {status}");
     }
 
     let mut benchmarks = BTreeMap::new();
-    for path in output_files(out_dir)? {
-        if path.extension().is_none_or(|e| e != "out") {
-            continue;
-        }
+    for path in files_with_extension(out_dir, "out")? {
         let text = fs::read_to_string(&path)?;
         let regions = parse_profile(&text).with_context(|| path.display().to_string())?;
         for (name, metrics) in regions {
@@ -92,12 +90,11 @@ pub fn measure(command: &[OsString], out_dir: &Path) -> Result<Report> {
     })
 }
 
-fn output_files(dir: &Path) -> Result<Vec<std::path::PathBuf>> {
+fn files_with_extension(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
     let mut files = Vec::new();
     for entry in fs::read_dir(dir)? {
         let path = entry?.path();
-        let name = path.file_name().unwrap_or_default().to_string_lossy();
-        if name.ends_with(".out") || (name.starts_with("valgrind.") && name.ends_with(".log")) {
+        if path.extension().is_some_and(|e| e == extension) {
             files.push(path);
         }
     }

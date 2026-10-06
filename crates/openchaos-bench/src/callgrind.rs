@@ -54,7 +54,7 @@ impl Metrics {
 /// Each part dumped by [`crate::bench`] becomes one `(name, metrics)` entry,
 /// in file order. Parts with any other trigger, such as program termination,
 /// are skipped.
-pub fn parse_profile(text: &str) -> Result<Vec<(String, Metrics)>> {
+pub(crate) fn parse_profile(text: &str) -> Result<Vec<(String, Metrics)>> {
     let mut regions = Vec::new();
     let mut name: Option<&str> = None;
     let mut events: Vec<&str> = Vec::new();

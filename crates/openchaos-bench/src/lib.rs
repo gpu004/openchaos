@@ -8,7 +8,7 @@ mod hooks;
 mod report;
 mod valgrind;
 
-pub use callgrind::{parse_profile, Metrics};
-pub use hooks::{bench, running_on_valgrind};
-pub use report::{compare, Comparison, Report};
+pub use callgrind::Metrics;
+pub use hooks::bench;
+pub use report::{compare, Change, Comparison, Report};
 pub use valgrind::{measure, valgrind_version};

@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 use openchaos_bench::{compare, measure, Report};
 use std::ffi::OsString;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Parser)]
 #[command(version, about = "Deterministic benchmarks under callgrind")]
@@ -69,7 +69,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn read_report(path: &PathBuf) -> Result<Report> {
+fn read_report(path: &Path) -> Result<Report> {
     let text = fs::read_to_string(path).with_context(|| path.display().to_string())?;
     serde_json::from_str(&text).with_context(|| path.display().to_string())
 }
