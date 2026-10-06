@@ -1,16 +1,14 @@
 openchaos NOTICE
 ================
 
-This project adapts API *shapes* and concepts from:
+This project adapts API shapes and concepts from:
 
 - Hegel (https://hegel.dev/) — MIT License — property-based testing protocol
   and per-language clients. openchaos does not vendor libhegel or hegel-core
   inside openchaos-core.
-- CodSpeed (https://github.com/CodSpeedHQ/codspeed) — Apache-2.0 — inspiration
-  for named instruments and simulation-mode logical work metering. openchaos
-  does not depend on Valgrind forks or CodSpeed SaaS. crates/openchaos-bench
-  contains code derived from the CodSpeed runner and instrument-hooks; see
-  crates/openchaos-bench/NOTICE.
+- CodSpeed (https://github.com/CodSpeedHQ/codspeed) — Apache-2.0 —
+  crates/openchaos-bench contains code derived from the CodSpeed runner and
+  instrument-hooks; see crates/openchaos-bench/NOTICE.
 
 openchaos itself is dual-licensed MIT OR Apache-2.0. See LICENSE-MIT and
 LICENSE-APACHE.

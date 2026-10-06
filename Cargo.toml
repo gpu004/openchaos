@@ -16,7 +16,6 @@ rust-version = "1.86"
 
 [workspace.lints.rust]
 unsafe_code = "deny"
-missing_docs = "deny"
 missing_debug_implementations = "deny"
 unreachable_pub = "deny"
 unused_qualifications = "deny"

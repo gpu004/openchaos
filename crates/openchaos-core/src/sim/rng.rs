@@ -1,23 +1,16 @@
-//! Seeded deterministic PRNG owned by openchaos-core.
-//!
-//! Algorithm: xoshiro128** with SplitMix64-style seeding from [`Seed`].
-//! Language packages must draw entropy only through this stream (or an FFI
-//! that wraps it) — never a peer implementation with a different algorithm.
-
 use super::seed::Seed;
 
-/// Deterministic pseudo-random generator used by sims.
+/// xoshiro128** seeded from a [`Seed`].
 #[derive(Debug, Clone)]
 pub struct SimRng {
     s: [u32; 4],
 }
 
 impl SimRng {
-    /// Create from a [`Seed`]. Never collapses to the all-zero xoshiro state.
     #[must_use]
     pub fn from_seed(seed: Seed) -> Self {
         let mut s = [0u32; 4];
-        let mut z = seed.get() | 1;
+        let mut z = seed.get();
         for slot in &mut s {
             z = z
                 .wrapping_add(0x9E37_79B9_7F4A_7C15)
@@ -30,7 +23,6 @@ impl SimRng {
         Self { s }
     }
 
-    /// Next `u32` from the stream.
     pub fn next_u32(&mut self) -> u32 {
         let result = self.s[1].wrapping_mul(5).rotate_left(7).wrapping_mul(9);
         let t = self.s[1] << 9;
@@ -46,14 +38,13 @@ impl SimRng {
         result
     }
 
-    /// Next `u64` from the stream.
     pub fn next_u64(&mut self) -> u64 {
         let hi = u64::from(self.next_u32());
         let lo = u64::from(self.next_u32());
         (hi << 32) | lo
     }
 
-    /// Fill `buf` with bytes from the stream (little-endian `u32` chunks).
+    /// Little-endian `u32` words; a partial last word is truncated.
     pub fn fill_bytes(&mut self, buf: &mut [u8]) {
         let mut i = 0;
         while i < buf.len() {
@@ -64,10 +55,7 @@ impl SimRng {
         }
     }
 
-    /// Uniform value in `0..bound` (exclusive). Returns 0 if `bound == 0`.
-    ///
-    /// Bounds that fit in `u32` use Lemire's nearly divisionless method; wider
-    /// bounds fall back to rejection sampling on `u64`.
+    /// Uniform in `0..bound`. Returns 0 when `bound == 0`.
     pub fn gen_range(&mut self, bound: u64) -> u64 {
         if bound == 0 {
             return 0;
@@ -93,14 +81,6 @@ impl SimRng {
         }
     }
 
-    /// Inclusive range `min..=max`.
-    pub fn gen_inclusive(&mut self, min: u64, max: u64) -> u64 {
-        debug_assert!(min <= max);
-        let span = max - min;
-        min + self.gen_range(span.saturating_add(1))
-    }
-
-    /// Fair coin flip.
     pub fn gen_bool(&mut self) -> bool {
         self.next_u32() & 1 == 1
     }
@@ -144,7 +124,24 @@ mod tests {
     }
 
     #[test]
-    fn golden_first_u64_for_seed_1_is_the_cross_language_contract() {
+    fn golden_first_u64_for_seed_0() {
+        let mut zero = SimRng::from_seed(Seed::new(0));
+        assert_eq!(zero.next_u64(), 0xda23_aa7a_8b1f_aad2);
+    }
+
+    #[test]
+    fn golden_gen_range_for_seed_1() {
+        let mut rng = SimRng::from_seed(Seed::new(1));
+        let small: Vec<u64> = (0..4).map(|_| rng.gen_range(1000)).collect();
+        assert_eq!(small, [458, 777, 883, 317]);
+        assert_eq!(
+            SimRng::from_seed(Seed::new(1)).gen_range(1 << 40),
+            480_080_490_810
+        );
+    }
+
+    #[test]
+    fn golden_first_u64_for_seed_1() {
         let mut rng = SimRng::from_seed(Seed::new(1));
         assert_eq!(rng.next_u64(), 0x7577_4b6f_c706_f13a);
     }

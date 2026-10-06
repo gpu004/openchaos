@@ -11,7 +11,5 @@ categories = ["simulation", "development-tools::testing"]
 
 [dependencies]
 
-[dev-dependencies]
-
 [lints]
 workspace = true

@@ -10,7 +10,7 @@ fn run_events(initial: u64) -> u64 {
         world.schedule_in(i % 97, i);
     }
     world
-        .run_until(u64::MAX, |w, n| {
+        .run(u64::MAX, &mut |w: &mut SimWorld<u64>, n: u64| {
             if n % 4 == 0 {
                 let delay = 1 + w.rng().gen_range(8);
                 w.schedule_in(delay, n + 1);

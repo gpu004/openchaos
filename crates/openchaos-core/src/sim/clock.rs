@@ -1,56 +1,28 @@
-//! Logical simulation clock (not wall time).
+use core::fmt;
 
-/// Monotonic logical time used by the scheduler.
+/// Logical simulation time in ticks. Only the scheduler advances the world's clock.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Clock(u64);
 
 impl Clock {
-    /// Create a clock at the given logical tick.
     #[must_use]
     pub const fn new(ticks: u64) -> Self {
         Self(ticks)
     }
 
-    /// Current logical time.
     #[must_use]
     pub const fn ticks(self) -> u64 {
         self.0
     }
 
-    /// Advance by `delta` ticks.
-    pub fn advance(&mut self, delta: u64) {
-        self.0 = self.0.saturating_add(delta);
-    }
-
-    /// Jump to an absolute time (must be >= current).
-    pub fn set(&mut self, ticks: u64) {
-        debug_assert!(ticks >= self.0, "clock must not move backwards");
-        self.0 = ticks;
+    #[must_use]
+    pub const fn after(self, delay: u64) -> Self {
+        Self(self.0.saturating_add(delay))
     }
 }
 
-impl From<u64> for Clock {
-    fn from(ticks: u64) -> Self {
-        Self(ticks)
-    }
-}
-
-impl core::fmt::Display for Clock {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl fmt::Display for Clock {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "t={}", self.0)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn advances_monotonically() {
-        let mut c = Clock::new(0);
-        c.advance(10);
-        assert_eq!(c.ticks(), 10);
-        c.set(20);
-        assert_eq!(c.ticks(), 20);
     }
 }
