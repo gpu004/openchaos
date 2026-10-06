@@ -1,13 +1,14 @@
 use crate::sim::Clock;
-use std::cmp::{Ordering, Reverse};
+use core::cmp::{Ordering, Reverse};
+use core::fmt;
 use std::collections::BinaryHeap;
-use std::fmt;
 
 /// Insertion order of an event. Breaks ties between events due at the same time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct EventId(u64);
 
 impl EventId {
+    #[must_use]
     pub const fn get(self) -> u64 {
         self.0
     }
@@ -37,7 +38,7 @@ impl fmt::Display for InPast {
     }
 }
 
-impl std::error::Error for InPast {}
+impl core::error::Error for InPast {}
 
 #[derive(Debug)]
 struct Entry<T>(TimedEvent<T>);
@@ -96,11 +97,19 @@ impl<T> Scheduler<T> {
         if at < self.now {
             return Err(InPast { at, now: self.now });
         }
+        Ok(self.push(at, payload))
+    }
+
+    pub(crate) fn schedule_after(&mut self, delay: u64, payload: T) -> EventId {
+        self.push(self.now.after(delay), payload)
+    }
+
+    fn push(&mut self, at: Clock, payload: T) -> EventId {
         let id = EventId(self.next_id);
         self.next_id += 1;
         self.heap
             .push(Reverse(Entry(TimedEvent { at, id, payload })));
-        Ok(id)
+        id
     }
 
     pub(crate) fn peek(&self) -> Option<(Clock, EventId)> {

@@ -33,6 +33,7 @@ pub struct SimWorld<T> {
 }
 
 impl<T> SimWorld<T> {
+    #[must_use]
     pub fn new(seed: Seed) -> Self {
         Self {
             seed,
@@ -42,10 +43,12 @@ impl<T> SimWorld<T> {
         }
     }
 
+    #[must_use]
     pub fn seed(&self) -> Seed {
         self.seed
     }
 
+    #[must_use]
     pub fn clock(&self) -> Clock {
         self.scheduler.now()
     }
@@ -55,29 +58,31 @@ impl<T> SimWorld<T> {
     }
 
     /// `(time, id)` of every delivered event, in delivery order.
+    #[must_use]
     pub fn trace(&self) -> &[(Clock, EventId)] {
         &self.trace
     }
 
+    #[must_use]
     pub fn pending(&self) -> usize {
         self.scheduler.len()
     }
 
+    #[must_use]
     pub fn peek_next(&self) -> Option<(Clock, EventId)> {
         self.scheduler.peek()
     }
 
-    /// Fails with [`InPast`] if `at` is earlier than [`Self::clock`]; nothing is queued then.
+    /// # Errors
+    ///
+    /// Returns [`InPast`] if `at` is earlier than [`Self::clock`]. Nothing is queued then.
     pub fn schedule_at(&mut self, at: Clock, payload: T) -> Result<EventId, InPast> {
         self.scheduler.schedule(at, payload)
     }
 
     /// Saturates at `u64::MAX` ticks.
     pub fn schedule_in(&mut self, delay: u64, payload: T) -> EventId {
-        let at = self.clock().after(delay);
-        self.scheduler
-            .schedule(at, payload)
-            .expect("now + delay is never in the past")
+        self.scheduler.schedule_after(delay, payload)
     }
 
     /// Delivers the earliest event and advances the clock to its time.

@@ -13,3 +13,5 @@ categories = ["development-tools::testing", "simulation"]
 openchaos-core = { path = "../../crates/openchaos-core" }
 hegeltest = "0.46"
 
+[lints]
+workspace = true

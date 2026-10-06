@@ -10,3 +10,6 @@ keywords = ["simulation", "deterministic", "discrete-event"]
 categories = ["simulation", "development-tools::testing"]
 
 [dependencies]
+
+[lints]
+workspace = true
