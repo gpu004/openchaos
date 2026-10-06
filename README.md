@@ -30,6 +30,7 @@ cargo run -p openchaos --example lru_capacity
 | Package | Path | Owns |
 | --- | --- | --- |
 | `openchaos-core` | `crates/openchaos-core` | Sim + meters (deep) |
+| `openchaos-bench` | `crates/openchaos-bench` | Callgrind benchmark runner (trimmed CodSpeed fork) |
 | `openchaos` | `lang/rust` | Thin Rust bindings + Hegel `bind` adapter |
 | examples | `examples/`, `lang/rust/examples/` | Quarantined demos (not core depth) |
 
