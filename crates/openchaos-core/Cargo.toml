@@ -10,5 +10,3 @@ keywords = ["simulation", "deterministic", "discrete-event"]
 categories = ["simulation", "development-tools::testing"]
 
 [dependencies]
-
-[dev-dependencies]

@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-description = "Thin Rust language package: bindings to openchaos-core (+ Hegel adapter)"
+description = "Rust package for openchaos-core with Hegel generators"
 readme = "README.md"
 keywords = ["simulation", "property-based-testing", "hegel", "deterministic"]
 categories = ["development-tools::testing", "simulation"]
@@ -13,12 +13,3 @@ categories = ["development-tools::testing", "simulation"]
 openchaos-core = { path = "../../crates/openchaos-core" }
 hegeltest = "0.46"
 
-[dev-dependencies]
-
-[[example]]
-name = "sim_bench"
-path = "examples/sim_bench.rs"
-
-[[example]]
-name = "lru_capacity"
-path = "examples/lru_capacity.rs"

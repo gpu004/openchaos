@@ -1,114 +1,118 @@
-//! Priority queue of timed events.
-
 use crate::sim::Clock;
-use std::cmp::Ordering;
+use std::cmp::{Ordering, Reverse};
 use std::collections::BinaryHeap;
+use std::fmt;
 
-/// Opaque handle assigned when an event is enqueued.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// Insertion order of an event. Breaks ties between events due at the same time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct EventId(u64);
 
 impl EventId {
-    /// Raw id bits.
     pub const fn get(self) -> u64 {
         self.0
     }
 }
 
-/// An event stamped with logical time and stable insertion order.
 #[derive(Debug, Clone)]
 pub struct TimedEvent<T> {
-    /// When the event fires.
     pub at: Clock,
-    /// Stable id (lower = earlier for equal times).
     pub id: EventId,
-    /// User payload.
     pub payload: T,
 }
 
-#[derive(Debug)]
-struct HeapEntry<T> {
-    at: Clock,
-    id: EventId,
-    payload: T,
+/// Returned when an event is scheduled before the current time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct InPast {
+    pub at: Clock,
+    pub now: Clock,
 }
 
-impl<T> PartialEq for HeapEntry<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.at == other.at && self.id == other.id
+impl fmt::Display for InPast {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "cannot schedule at {} before now ({})",
+            self.at, self.now
+        )
     }
 }
 
-impl<T> Eq for HeapEntry<T> {}
+impl std::error::Error for InPast {}
 
-impl<T> PartialOrd for HeapEntry<T> {
+#[derive(Debug)]
+struct Entry<T>(TimedEvent<T>);
+
+impl<T> Entry<T> {
+    fn key(&self) -> (Clock, EventId) {
+        (self.0.at, self.0.id)
+    }
+}
+
+impl<T> PartialEq for Entry<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.key() == other.key()
+    }
+}
+
+impl<T> Eq for Entry<T> {}
+
+impl<T> PartialOrd for Entry<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<T> Ord for HeapEntry<T> {
+impl<T> Ord for Entry<T> {
     fn cmp(&self, other: &Self) -> Ordering {
-        // BinaryHeap is a max-heap; reverse so earliest time / lowest id pops first.
-        match other.at.cmp(&self.at) {
-            Ordering::Equal => other.id.0.cmp(&self.id.0),
-            ord => ord,
-        }
+        self.key().cmp(&other.key())
     }
 }
 
-/// Deterministic event priority queue.
+/// Event queue that owns the clock. `schedule` rejects times before `now`, so
+/// `pop` can only move `now` forward.
 #[derive(Debug)]
-pub struct Scheduler<T> {
+pub(crate) struct Scheduler<T> {
+    now: Clock,
     next_id: u64,
-    heap: BinaryHeap<HeapEntry<T>>,
-}
-
-impl<T> Default for Scheduler<T> {
-    fn default() -> Self {
-        Self::new()
-    }
+    heap: BinaryHeap<Reverse<Entry<T>>>,
 }
 
 impl<T> Scheduler<T> {
-    /// Empty scheduler.
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
-            next_id: 1,
+            now: Clock::default(),
+            next_id: 0,
             heap: BinaryHeap::new(),
         }
     }
 
-    /// Number of pending events.
-    pub fn len(&self) -> usize {
+    pub(crate) fn now(&self) -> Clock {
+        self.now
+    }
+
+    pub(crate) fn len(&self) -> usize {
         self.heap.len()
     }
 
-    /// Whether the queue is empty.
-    pub fn is_empty(&self) -> bool {
-        self.heap.is_empty()
-    }
-
-    /// Schedule `payload` at logical time `at`.
-    pub fn schedule(&mut self, at: Clock, payload: T) -> EventId {
+    pub(crate) fn schedule(&mut self, at: Clock, payload: T) -> Result<EventId, InPast> {
+        if at < self.now {
+            return Err(InPast { at, now: self.now });
+        }
         let id = EventId(self.next_id);
-        self.next_id = self.next_id.saturating_add(1);
-        self.heap.push(HeapEntry { at, id, payload });
-        id
+        self.next_id += 1;
+        self.heap
+            .push(Reverse(Entry(TimedEvent { at, id, payload })));
+        Ok(id)
     }
 
-    /// Peek at the next event without removing it.
-    pub fn peek(&self) -> Option<(Clock, EventId)> {
-        self.heap.peek().map(|e| (e.at, e.id))
+    pub(crate) fn peek(&self) -> Option<(Clock, EventId)> {
+        self.heap.peek().map(|Reverse(e)| e.key())
     }
 
-    /// Pop the next event.
-    pub fn pop(&mut self) -> Option<TimedEvent<T>> {
-        self.heap.pop().map(|e| TimedEvent {
-            at: e.at,
-            id: e.id,
-            payload: e.payload,
-        })
+    pub(crate) fn pop(&mut self) -> Option<TimedEvent<T>> {
+        let Reverse(Entry(event)) = self.heap.pop()?;
+        self.now = event.at;
+        Some(event)
     }
 }
 
@@ -119,14 +123,29 @@ mod tests {
     #[test]
     fn orders_by_time_then_id() {
         let mut s = Scheduler::new();
-        s.schedule(Clock::new(5), "late");
-        let first = s.schedule(Clock::new(1), "a");
-        let second = s.schedule(Clock::new(1), "b");
-        let e1 = s.pop().unwrap();
-        let e2 = s.pop().unwrap();
-        let e3 = s.pop().unwrap();
-        assert_eq!(e1.id, first);
-        assert_eq!(e2.id, second);
-        assert_eq!(e3.payload, "late");
+        s.schedule(Clock::new(5), "late").unwrap();
+        let a = s.schedule(Clock::new(1), "a").unwrap();
+        let b = s.schedule(Clock::new(1), "b").unwrap();
+        assert_eq!(s.pop().unwrap().id, a);
+        assert_eq!(s.pop().unwrap().id, b);
+        assert_eq!(s.pop().unwrap().payload, "late");
+        assert_eq!(s.now(), Clock::new(5));
+    }
+
+    #[test]
+    fn rejects_past_and_keeps_clock() {
+        let mut s = Scheduler::new();
+        s.schedule(Clock::new(10), ()).unwrap();
+        s.pop().unwrap();
+        let err = s.schedule(Clock::new(3), ()).unwrap_err();
+        assert_eq!(
+            err,
+            InPast {
+                at: Clock::new(3),
+                now: Clock::new(10)
+            }
+        );
+        assert_eq!(s.len(), 0);
+        assert!(s.schedule(Clock::new(10), ()).is_ok());
     }
 }

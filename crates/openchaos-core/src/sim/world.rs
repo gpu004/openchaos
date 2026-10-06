@@ -1,147 +1,103 @@
-//! Replayable simulation world: clock + payload scheduler + seed.
-//!
-//! # Run seam
-//!
-//! Events on the queue are opaque payloads ([`TimedEvent`]). Handlers run
-//! **outside** the queue via [`Self::step`] + user code, [`Self::run_until`], or
-//! [`Self::run_with`]. This is the portable binding contract for foreign
-//! languages — do not store host closures in the scheduler.
-
 use super::clock::Clock;
 use super::rng::SimRng;
-use super::run::{EventHandler, RunLimit, RunSummary};
-use super::scheduler::{EventId, Scheduler, TimedEvent};
+use super::scheduler::{EventId, InPast, Scheduler, TimedEvent};
 use super::seed::Seed;
-use crate::instrument::Meter;
 
-/// A deterministic discrete-event world.
-///
-/// Same [`Seed`] and same schedule decisions produce the same event order and
-/// meter totals — suitable for property tests and simulation benches.
+/// Handles a delivered payload. Runs outside the queue and may schedule more events.
+pub trait EventHandler<T> {
+    fn on_event(&mut self, world: &mut SimWorld<T>, payload: T);
+}
+
+impl<T, F> EventHandler<T> for F
+where
+    F: FnMut(&mut SimWorld<T>, T),
+{
+    fn on_event(&mut self, world: &mut SimWorld<T>, payload: T) {
+        self(world, payload);
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RunSummary {
+    pub delivered: u64,
+    pub drained: bool,
+}
+
+/// Same seed and same schedule calls produce the same trace.
 #[derive(Debug)]
 pub struct SimWorld<T> {
     seed: Seed,
     rng: SimRng,
-    clock: Clock,
     scheduler: Scheduler<T>,
-    meter: Meter,
-    steps: u64,
-    trace: Vec<(u64, EventId)>,
+    trace: Vec<(Clock, EventId)>,
 }
 
 impl<T> SimWorld<T> {
-    /// Create a world from an explicit seed.
     pub fn new(seed: Seed) -> Self {
         Self {
             seed,
             rng: SimRng::from_seed(seed),
-            clock: Clock::new(0),
             scheduler: Scheduler::new(),
-            meter: Meter::new(),
-            steps: 0,
             trace: Vec::new(),
         }
     }
 
-    /// Seed that created this world.
     pub fn seed(&self) -> Seed {
         self.seed
     }
 
-    /// Current logical clock.
     pub fn clock(&self) -> Clock {
-        self.clock
+        self.scheduler.now()
     }
 
-    /// Mutable access to the world's RNG (for model code that needs entropy).
     pub fn rng(&mut self) -> &mut SimRng {
         &mut self.rng
     }
 
-    /// Shared simulation meter (CodSpeed-inspired logical work counters).
-    pub fn meter(&self) -> &Meter {
-        &self.meter
-    }
-
-    /// Mutable meter for recording work inside handlers.
-    pub fn meter_mut(&mut self) -> &mut Meter {
-        &mut self.meter
-    }
-
-    /// Number of events delivered so far.
-    pub fn steps(&self) -> u64 {
-        self.steps
-    }
-
-    /// Compact trace of `(logical_time, event_id)` for equality checks.
-    pub fn trace(&self) -> &[(u64, EventId)] {
+    /// `(time, id)` of every delivered event, in delivery order.
+    pub fn trace(&self) -> &[(Clock, EventId)] {
         &self.trace
     }
 
-    /// Peek at the next scheduled time/id without delivering.
-    pub fn peek_next(&self) -> Option<(Clock, EventId)> {
-        self.scheduler.peek()
-    }
-
-    /// Schedule an event at an absolute logical time (payload only — no closure).
-    pub fn schedule_at(&mut self, at: Clock, payload: T) -> EventId {
-        self.meter.record_event();
-        self.scheduler.schedule(at, payload)
-    }
-
-    /// Schedule an event `delay` ticks from now.
-    pub fn schedule_in(&mut self, delay: u64, payload: T) -> EventId {
-        let at = Clock::new(self.clock.ticks().saturating_add(delay));
-        self.schedule_at(at, payload)
-    }
-
-    /// Pending event count.
     pub fn pending(&self) -> usize {
         self.scheduler.len()
     }
 
-    /// Deliver the next event, advancing the clock. Returns `None` if idle.
-    ///
-    /// This is the low-level FFI-friendly step: adapters receive the payload and
-    /// invoke their own handler outside core.
+    pub fn peek_next(&self) -> Option<(Clock, EventId)> {
+        self.scheduler.peek()
+    }
+
+    /// Fails with [`InPast`] if `at` is earlier than [`Self::clock`]; nothing is queued then.
+    pub fn schedule_at(&mut self, at: Clock, payload: T) -> Result<EventId, InPast> {
+        self.scheduler.schedule(at, payload)
+    }
+
+    /// Saturates at `u64::MAX` ticks.
+    pub fn schedule_in(&mut self, delay: u64, payload: T) -> EventId {
+        let at = self.clock().after(delay);
+        self.scheduler
+            .schedule(at, payload)
+            .expect("now + delay is never in the past")
+    }
+
+    /// Delivers the earliest event and advances the clock to its time.
     pub fn step(&mut self) -> Option<TimedEvent<T>> {
         let event = self.scheduler.pop()?;
-        self.clock.set(event.at.ticks());
-        self.steps += 1;
-        self.meter.record_step();
-        self.trace.push((event.at.ticks(), event.id));
+        self.trace.push((event.at, event.id));
         Some(event)
     }
 
-    /// Run until the queue is empty or `max_steps` events have been delivered.
-    ///
-    /// `handler` receives each payload **outside** the queue and may schedule more work.
-    pub fn run_until<F>(&mut self, max_steps: u64, mut handler: F) -> RunSummary
-    where
-        F: FnMut(&mut SimWorld<T>, T),
-    {
-        self.run_with(RunLimit::steps(max_steps), &mut handler)
-    }
-
-    /// Drive the world with an [`EventHandler`] and an explicit [`RunLimit`].
-    pub fn run_with<H>(&mut self, limit: RunLimit, handler: &mut H) -> RunSummary
-    where
-        H: EventHandler<T>,
-    {
-        let mut delivered = 0u64;
-        while delivered < limit.max_steps {
-            let Some(event) = self.step() else {
-                return RunSummary {
-                    delivered,
-                    drained: true,
-                };
-            };
+    /// Steps until the queue drains or `max_steps` events are delivered.
+    pub fn run(&mut self, max_steps: u64, handler: &mut impl EventHandler<T>) -> RunSummary {
+        let mut delivered = 0;
+        while delivered < max_steps {
+            let Some(event) = self.step() else { break };
             handler.on_event(self, event.payload);
             delivered += 1;
         }
         RunSummary {
             delivered,
-            drained: self.scheduler.is_empty(),
+            drained: self.pending() == 0,
         }
     }
 }
@@ -149,58 +105,63 @@ impl<T> SimWorld<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sim::run::RunLimit;
-
-    #[test]
-    fn same_seed_same_trace() {
-        fn run(seed: Seed) -> Vec<(u64, EventId)> {
-            let mut w = SimWorld::new(seed);
-            w.schedule_at(Clock::new(3), 30u32);
-            w.schedule_at(Clock::new(1), 10u32);
-            w.schedule_at(Clock::new(2), 20u32);
-            while w.step().is_some() {}
-            w.trace().to_vec()
-        }
-        assert_eq!(run(Seed::new(99)), run(Seed::new(99)));
-    }
 
     #[test]
     fn handler_can_reschedule() {
         let mut w = SimWorld::new(Seed::new(1));
         w.schedule_in(1, 0u32);
         let mut seen = Vec::new();
-        let summary = w.run_until(5, |world, n| {
+        let summary = w.run(5, &mut |world: &mut SimWorld<u32>, n| {
             seen.push(n);
             if n < 3 {
                 world.schedule_in(1, n + 1);
             }
         });
         assert_eq!(seen, vec![0, 1, 2, 3]);
-        assert_eq!(summary.delivered, 4);
-        assert!(summary.drained);
+        assert_eq!(
+            summary,
+            RunSummary {
+                delivered: 4,
+                drained: true
+            }
+        );
+        assert_eq!(w.clock(), Clock::new(4));
     }
 
     #[test]
-    fn run_limit_stops_before_drain() {
+    fn run_stops_at_max_steps() {
         let mut w = SimWorld::new(Seed::new(2));
         for i in 0..5u32 {
-            w.schedule_at(Clock::new(u64::from(i)), i);
+            w.schedule_in(u64::from(i), i);
         }
-        let summary = w.run_with(RunLimit::steps(2), &mut |_: &mut SimWorld<u32>, _| {});
-        assert_eq!(summary.delivered, 2);
-        assert!(!summary.drained);
+        let summary = w.run(2, &mut |_: &mut SimWorld<u32>, _| {});
+        assert_eq!(
+            summary,
+            RunSummary {
+                delivered: 2,
+                drained: false
+            }
+        );
         assert_eq!(w.pending(), 3);
+    }
+
+    #[test]
+    fn past_schedule_is_rejected_and_clock_holds() {
+        let mut w = SimWorld::new(Seed::new(3));
+        w.schedule_at(Clock::new(10), 0u32).unwrap();
+        w.step().unwrap();
+        assert!(w.schedule_at(Clock::new(5), 1).is_err());
+        assert_eq!(w.pending(), 0);
+        assert!(w.step().is_none());
+        assert_eq!(w.clock(), Clock::new(10));
     }
 
     #[test]
     fn peek_matches_next_step() {
         let mut w = SimWorld::new(Seed::new(3));
-        let id = w.schedule_at(Clock::new(4), 7u32);
-        let peek = w.peek_next().expect("pending");
-        assert_eq!(peek.0, Clock::new(4));
-        assert_eq!(peek.1, id);
+        let id = w.schedule_at(Clock::new(4), 7u32).unwrap();
+        assert_eq!(w.peek_next(), Some((Clock::new(4), id)));
         let event = w.step().unwrap();
-        assert_eq!(event.id, id);
-        assert_eq!(event.payload, 7);
+        assert_eq!((event.id, event.payload), (id, 7));
     }
 }
