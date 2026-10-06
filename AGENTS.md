@@ -12,7 +12,7 @@ sh scripts/check.sh
 `scripts/check.sh` is the same gate CI runs in `.github/workflows/lint.yml`. Install the non-Rust tools once with
 `uv tool install typos taplo shellcheck-py actionlint-py zizmor`.
 
-CI also runs weekly and against `beta`, so new upstream lints surface before they reach `stable`.
+CI also runs weekly and against `beta` (non-blocking), so new upstream lints surface before they reach `stable`.
 
 ## Lint policy
 

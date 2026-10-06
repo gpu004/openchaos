@@ -23,6 +23,7 @@ jobs:
   rust:
     name: rust (${{ matrix.toolchain }})
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.toolchain == 'beta' }}
     permissions:
       contents: read
     strategy:
