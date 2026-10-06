@@ -6,6 +6,7 @@ Deterministic discrete-event simulation for property-based tests written with
 | Package | Path | Contents |
 | --- | --- | --- |
 | `openchaos-core` | `crates/openchaos-core` | Seed, RNG, clock, event queue, `SimWorld`, and `Cluster` (nodes, faulty network, skewed clocks). No dependencies. |
+| `openchaos-bench` | `crates/openchaos-bench` | Runs benchmarks under callgrind and compares instruction-count reports. Trimmed from CodSpeed. |
 | `openchaos` | `lang/rust` | Re-exports core and adds Hegel generators and `Scenario`, a shrinkable run of a `Cluster`. |
 
 Requires Rust 1.86+.

@@ -42,11 +42,15 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
           key: ${{ matrix.toolchain }}
+      - run: sudo apt-get update && sudo apt-get install -y valgrind
       - if: matrix.toolchain == 'stable'
         run: cargo fmt --all -- --check
       - if: matrix.toolchain != '1.86'
         run: cargo clippy --workspace --all-targets --all-features
       - run: cargo test --workspace --all-targets
+      - run: |
+          cargo build -p openchaos-bench --example sim_events
+          cargo test -p openchaos-bench --test determinism -- --ignored
       - if: matrix.toolchain == 'stable'
         run: cargo doc --workspace --no-deps
 

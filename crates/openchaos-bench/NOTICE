@@ -1,0 +1,24 @@
+openchaos-bench NOTICE
+======================
+
+Parts of this crate are derived from CodSpeed
+(https://github.com/CodSpeedHQ/codspeed), licensed Apache-2.0 OR MIT, at commit
+214c040859ab0db74a9a11f09a3e44796847499f, and from CodSpeed instrument-hooks
+(https://github.com/CodSpeedHQ/instrument-hooks), licensed Apache-2.0 OR MIT,
+at commit b9ddb5bc654b2e6fa13eb18efcd3a45e7ecda0bb. They are used here under
+Apache-2.0.
+
+- src/valgrind.rs: Valgrind argument list, `setarch --addr-no-randomize`
+  wrapper and per-process output layout from codspeed
+  src/executor/valgrind/measure.rs (`get_valgrind_args`, `measure`) and the
+  version probe from src/executor/valgrind/setup.rs (`get_valgrind_status`).
+- src/hooks.rs: the start/stop sequence of instrument-hooks
+  src/instruments/valgrind.zig (`start_benchmark`, `stop_benchmark`,
+  `set_executed_benchmark`). The client-request instruction sequences and
+  request numbers come from Valgrind's valgrind.h and callgrind.h (BSD-style
+  license, Copyright (C) 2000-2017 Julian Seward).
+
+Changes: removed everything outside simulation mode, the SaaS upload, the
+pinned valgrind-codspeed package download and the source build, Tracegrind,
+Python and Node object skipping, and the exit-code wrapper script. Added
+callgrind profile parsing, local JSON reports and report comparison.

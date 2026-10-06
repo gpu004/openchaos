@@ -18,7 +18,7 @@ Every lint is an error. Fix the code rather than silencing the lint.
 
 | Layer | Where | Enforces |
 | --- | --- | --- |
-| rustc + clippy | `[workspace.lints]` in `Cargo.toml` | `all` + `pedantic`, no `unsafe`, no `unwrap`/`expect`/`panic` outside tests, no `as` casts, no `print!`/`dbg!`/`todo!` |
+| rustc + clippy | `[workspace.lints]` in `Cargo.toml` | `all` + `pedantic`, `unsafe` only in `crates/openchaos-bench/src/hooks.rs` (core and lang forbid it), no `unwrap`/`expect`/`panic` outside tests, no `as` casts, no `print!`/`dbg!`/`todo!` |
 | clippy | `clippy.toml` | Determinism: no `HashMap`/`HashSet`, wall clocks, `thread::sleep`/`spawn`, `env::var`, or locks |
 | rustfmt / taplo | `rustfmt.toml`, `taplo fmt` | Rust and TOML formatting |
 | `scripts/lint-arch.sh` | shell | Core never imports Hegel or `lang/*`; `lang/*` never redefines core types or adds a second RNG/PBT; no `//` line comments; files under 500 lines |
