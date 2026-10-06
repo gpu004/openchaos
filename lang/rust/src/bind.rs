@@ -42,9 +42,8 @@ mod tests {
     #[hegel::test]
     fn drawn_seed_replays_identical_traces(tc: TestCase) {
         let seed = draw_seed_max(&tc, 10_000);
-        let delays = tc.draw(
-            gs::vecs(gs::integers::<u64>().min_value(0).max_value(20)).max_size(8),
-        );
+        let delays =
+            tc.draw(gs::vecs(gs::integers::<u64>().min_value(0).max_value(20)).max_size(8));
 
         let mut a = SimWorld::new(seed);
         let mut b = SimWorld::new(seed);

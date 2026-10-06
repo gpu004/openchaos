@@ -1,7 +1,7 @@
 //! Priority queue of timed events.
 
 use crate::sim::Clock;
-use std::cmp::Ordering;
+use core::cmp::Ordering;
 use std::collections::BinaryHeap;
 
 /// Opaque handle assigned when an event is enqueued.
@@ -10,6 +10,7 @@ pub struct EventId(u64);
 
 impl EventId {
     /// Raw id bits.
+    #[must_use]
     pub const fn get(self) -> u64 {
         self.0
     }
@@ -47,13 +48,13 @@ impl<T> PartialOrd for HeapEntry<T> {
     }
 }
 
+/// Reversed so the max-heap `BinaryHeap` pops the earliest time, then the lowest id.
 impl<T> Ord for HeapEntry<T> {
     fn cmp(&self, other: &Self) -> Ordering {
-        // BinaryHeap is a max-heap; reverse so earliest time / lowest id pops first.
-        match other.at.cmp(&self.at) {
-            Ordering::Equal => other.id.0.cmp(&self.id.0),
-            ord => ord,
-        }
+        other
+            .at
+            .cmp(&self.at)
+            .then_with(|| other.id.0.cmp(&self.id.0))
     }
 }
 
@@ -72,6 +73,7 @@ impl<T> Default for Scheduler<T> {
 
 impl<T> Scheduler<T> {
     /// Empty scheduler.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             next_id: 1,
@@ -80,11 +82,13 @@ impl<T> Scheduler<T> {
     }
 
     /// Number of pending events.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.heap.len()
     }
 
     /// Whether the queue is empty.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.heap.is_empty()
     }
@@ -98,6 +102,7 @@ impl<T> Scheduler<T> {
     }
 
     /// Peek at the next event without removing it.
+    #[must_use]
     pub fn peek(&self) -> Option<(Clock, EventId)> {
         self.heap.peek().map(|e| (e.at, e.id))
     }

@@ -15,16 +15,19 @@ pub struct Seed(u64);
 
 impl Seed {
     /// Construct from an explicit value (primary binding input).
+    #[must_use]
     pub const fn new(value: u64) -> Self {
         Self(value)
     }
 
     /// Raw seed bits (stable across languages for ABI / FFI).
+    #[must_use]
     pub const fn get(self) -> u64 {
         self.0
     }
 
     /// Mix two host integers into one seed (useful at language seams).
+    #[must_use]
     pub fn mix(a: u64, b: u64) -> Self {
         Seed::new(a).derive(b)
     }
@@ -32,10 +35,14 @@ impl Seed {
     /// Derive a child seed (for nested subsystems) without mutating this one.
     ///
     /// Uses a SplitMix64-style mix — deterministic and avalanche-friendly.
+    #[must_use]
     pub fn derive(self, salt: u64) -> Self {
-        let mut z = self.0.wrapping_add(salt).wrapping_add(0x9E3779B97F4A7C15);
-        z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
-        z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
+        let mut z = self
+            .0
+            .wrapping_add(salt)
+            .wrapping_add(0x9E37_79B9_7F4A_7C15);
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
         Self(z ^ (z >> 31))
     }
 
@@ -43,14 +50,15 @@ impl Seed {
     ///
     /// The label is folded with FNV-1a 64 so bindings can request named streams
     /// (`"net"`, `"disk"`) without inventing their own mixers.
+    #[must_use]
     pub fn stream(self, label: &str) -> Self {
         self.derive(fnv1a64(label.as_bytes()))
     }
 }
 
 fn fnv1a64(bytes: &[u8]) -> u64 {
-    const OFFSET: u64 = 0xcbf29ce484222325;
-    const PRIME: u64 = 0x100000001b3;
+    const OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+    const PRIME: u64 = 0x0100_0000_01b3;
     let mut hash = OFFSET;
     for &b in bytes {
         hash ^= u64::from(b);
@@ -87,8 +95,11 @@ mod tests {
         let s = Seed::new(1);
         assert_eq!(s.stream("net"), s.stream("net"));
         assert_ne!(s.stream("net"), s.stream("disk"));
-        // Golden: FNV-1a("net") mix — lock for cross-language adapters.
-        assert_eq!(s.stream("net").get(), 0xf3aa_bfdb_4a01_018e);
+    }
+
+    #[test]
+    fn net_stream_golden_is_the_cross_language_contract() {
+        assert_eq!(Seed::new(1).stream("net").get(), 0xf3aa_bfdb_4a01_018e);
     }
 
     #[test]
