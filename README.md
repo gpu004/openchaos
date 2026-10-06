@@ -25,7 +25,10 @@ cargo test -p openchaos-core
 cargo test -p openchaos
 cargo run -p openchaos --example sim_bench
 cargo run -p openchaos --example lru_capacity
+sh scripts/check.sh
 ```
+
+Lint policy and hooks: [AGENTS.md](AGENTS.md).
 
 | Package | Path | Owns |
 | --- | --- | --- |

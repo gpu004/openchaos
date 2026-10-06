@@ -12,8 +12,6 @@
 //! core and this package has nothing useful left. Hand-rolled PBT modules are
 //! intentionally absent — Hegel (`hegeltest` / lib `hegel`) is the PBT interface.
 
-#![deny(missing_docs)]
-
 pub mod bind;
 
 pub use openchaos_core::{

@@ -6,11 +6,13 @@ pub struct Clock(u64);
 
 impl Clock {
     /// Create a clock at the given logical tick.
+    #[must_use]
     pub const fn new(ticks: u64) -> Self {
         Self(ticks)
     }
 
     /// Current logical time.
+    #[must_use]
     pub const fn ticks(self) -> u64 {
         self.0
     }
@@ -33,8 +35,8 @@ impl From<u64> for Clock {
     }
 }
 
-impl std::fmt::Display for Clock {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for Clock {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "t={}", self.0)
     }
 }

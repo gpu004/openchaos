@@ -6,11 +6,11 @@
 
 use hegel::generators as gs;
 use hegel::TestCase;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BTreeMap, VecDeque};
 
 struct LruCache {
     capacity: usize,
-    map: HashMap<String, i64>,
+    map: BTreeMap<String, i64>,
     order: VecDeque<String>,
 }
 
@@ -18,7 +18,7 @@ impl LruCache {
     fn new(capacity: usize) -> Self {
         Self {
             capacity,
-            map: HashMap::new(),
+            map: BTreeMap::new(),
             order: VecDeque::new(),
         }
     }
@@ -45,7 +45,7 @@ impl LruCache {
 
 #[hegel::main]
 fn main(tc: TestCase) {
-    let capacity = tc.draw(gs::integers::<u64>().min_value(0).max_value(32)) as usize;
+    let capacity = tc.draw(gs::integers::<usize>().min_value(0).max_value(32));
     let mut cache = LruCache::new(capacity);
     let entries = tc.draw(gs::vecs(gs::tuples!(
         gs::text().max_size(8),
