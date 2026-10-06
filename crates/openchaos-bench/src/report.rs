@@ -181,7 +181,7 @@ mod tests {
                 .collect()
         };
         assert_eq!(names(1.0), ["slow"]);
-        assert!(names(1.1).is_empty());
+        assert_eq!(names(1.1), Vec::<String>::new());
     }
 
     #[test]
