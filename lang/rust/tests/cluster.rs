@@ -1,8 +1,8 @@
 use hegel::generators as gs;
 use hegel::TestCase;
 use openchaos::{
-    draw_seed, draw_sim_config, Clock, Cluster, Ctx, Fault, MsgId, NetworkConfig, Node, NodeId,
-    Seed, SimConfig, TraceEntry,
+    draw_faults, draw_seed, draw_sim_config, Clock, Cluster, Ctx, DropReason, Fault, MsgId,
+    NetworkConfig, Node, NodeId, Seed, SimConfig, TraceEntry,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -81,30 +81,6 @@ fn draw_fanouts(tc: &TestCase) -> (u32, Vec<u8>) {
 
 fn gossips(fanouts: &[u8]) -> Vec<Gossip> {
     fanouts.iter().copied().map(Gossip::new).collect()
-}
-
-fn draw_faults(tc: &TestCase, nodes: u32) -> Vec<(Clock, Fault)> {
-    let node = || gs::integers::<u32>().min_value(0).max_value(nodes - 1);
-    let raw = tc.draw(
-        gs::vecs(gs::tuples!(
-            gs::integers::<u64>().min_value(0).max_value(200),
-            gs::integers::<u8>().min_value(0).max_value(3),
-            node(),
-            gs::vecs(node()).max_size(6),
-        ))
-        .max_size(8),
-    );
-    raw.into_iter()
-        .map(|(at, kind, n, side)| {
-            let fault = match kind {
-                0 => Fault::Partition(side.into_iter().map(NodeId::new).collect()),
-                1 => Fault::Heal,
-                2 => Fault::Crash(NodeId::new(n)),
-                _ => Fault::Restart(NodeId::new(n)),
-            };
-            (Clock::new(at), fault)
-        })
-        .collect()
 }
 
 fn build(
@@ -220,4 +196,34 @@ fn node_clocks_are_monotonic_and_timers_never_fire_early(tc: TestCase) {
     for &id in &ids {
         assert_eq!(cluster.node(id).early_timers, 0);
     }
+}
+
+#[test]
+fn requests_reach_up_nodes_and_drop_at_down_nodes() {
+    let (a, b) = (NodeId::new(0), NodeId::new(1));
+    let mut cluster = Cluster::new(Seed::new(1), SimConfig::default(), gossips(&[0, 0]));
+    cluster
+        .schedule_fault(Clock::new(0), Fault::Crash(b))
+        .unwrap();
+    cluster.inject(Clock::new(1), a, Hops(0)).unwrap();
+    cluster.inject(Clock::new(1), b, Hops(0)).unwrap();
+    cluster.run(MAX_STEPS);
+    let outcomes: Vec<&TraceEntry> = cluster
+        .trace()
+        .entries()
+        .iter()
+        .filter(|e| match e {
+            TraceEntry::Request { msg, .. } | TraceEntry::Drop { msg, .. } => msg.get() < 2,
+            _ => false,
+        })
+        .collect();
+    assert_eq!(outcomes.len(), 2);
+    assert!(matches!(outcomes[0], TraceEntry::Request { to, .. } if *to == a));
+    assert!(matches!(
+        outcomes[1],
+        TraceEntry::Drop {
+            reason: DropReason::NodeDown,
+            ..
+        }
+    ));
 }

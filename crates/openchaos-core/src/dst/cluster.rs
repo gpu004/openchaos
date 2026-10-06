@@ -29,6 +29,11 @@ enum Event<M> {
         tag: u64,
         incarnation: u64,
     },
+    Request {
+        to: NodeId,
+        msg: MsgId,
+        payload: M,
+    },
     Fault(Fault),
 }
 
@@ -86,6 +91,22 @@ impl<N: Node> Cluster<N> {
         self.world.schedule_at(at, Event::Fault(fault))
     }
 
+    /// Queues a client request: [`Node::on_request`] runs on `to` at global time `at`.
+    /// Clients sit outside the network, so partitions and loss never touch requests,
+    /// but a request to a down node is dropped.
+    ///
+    /// # Errors
+    ///
+    /// [`InPast`] if `at` is earlier than [`Cluster::now`].
+    pub fn inject(&mut self, at: Clock, to: NodeId, payload: N::Msg) -> Result<EventId, InPast> {
+        let msg = MsgId::new(self.next_msg);
+        let id = self
+            .world
+            .schedule_at(at, Event::Request { to, msg, payload })?;
+        self.next_msg += 1;
+        Ok(id)
+    }
+
     /// Handles the next event. Returns false when nothing is pending.
     pub fn step(&mut self) -> bool {
         let Some(event) = self.world.step() else {
@@ -104,6 +125,7 @@ impl<N: Node> Cluster<N> {
                 tag,
                 incarnation,
             } => self.fire(at, node, tag, incarnation),
+            Event::Request { to, msg, payload } => self.request(at, to, msg, payload),
             Event::Fault(fault) => self.apply(at, fault),
         }
         true
@@ -172,6 +194,16 @@ impl<N: Node> Cluster<N> {
         self.invoke(to, |node, ctx| node.on_message(ctx, from, payload));
     }
 
+    fn request(&mut self, at: Clock, to: NodeId, msg: MsgId, payload: N::Msg) {
+        if !self.is_up(to) {
+            let reason = DropReason::NodeDown;
+            self.trace.push(TraceEntry::Drop { at, msg, reason });
+            return;
+        }
+        self.trace.push(TraceEntry::Request { at, to, msg });
+        self.invoke(to, |node, ctx| node.on_request(ctx, payload));
+    }
+
     fn fire(&mut self, at: Clock, node: NodeId, tag: u64, incarnation: u64) {
         let slot = &self.slots[node.index()];
         if !slot.up || slot.incarnation != incarnation {
@@ -182,10 +214,14 @@ impl<N: Node> Cluster<N> {
     }
 
     fn apply(&mut self, at: Clock, fault: Fault) {
-        match &fault {
-            Fault::Partition(nodes) => self.network.partition(nodes),
+        self.trace.push(TraceEntry::Fault {
+            at,
+            fault: fault.clone(),
+        });
+        match fault {
+            Fault::Partition(nodes) => self.network.partition(&nodes),
             Fault::Heal => self.network.heal(),
-            &Fault::Crash(id) => {
+            Fault::Crash(id) => {
                 let slot = &mut self.slots[id.index()];
                 if slot.up {
                     slot.up = false;
@@ -193,14 +229,13 @@ impl<N: Node> Cluster<N> {
                     slot.node.on_crash();
                 }
             }
-            &Fault::Restart(id) => {
+            Fault::Restart(id) => {
                 if !self.is_up(id) {
                     self.slots[id.index()].up = true;
                     self.invoke(id, N::on_restart);
                 }
             }
         }
-        self.trace.push(TraceEntry::Fault { at, fault });
     }
 
     fn invoke(&mut self, id: NodeId, handler: impl FnOnce(&mut N, &mut Ctx<'_, N::Msg>)) {

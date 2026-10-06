@@ -4,6 +4,7 @@ use super::fault::Fault;
 use super::network::MsgId;
 use super::node::NodeId;
 use crate::sim::{fnv1a64, Clock};
+use core::fmt;
 
 /// Why the network dropped a message.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -49,6 +50,15 @@ pub enum TraceEntry {
         msg: MsgId,
         /// Cause.
         reason: DropReason,
+    },
+    /// A client request reached [`crate::Node::on_request`].
+    Request {
+        /// Global time.
+        at: Clock,
+        /// Receiver.
+        to: NodeId,
+        /// Message id.
+        msg: MsgId,
     },
     /// A timer fired.
     Timer {
@@ -102,6 +112,63 @@ impl Trace {
     }
 }
 
+impl fmt::Display for DropReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Lost => "lost",
+            Self::Partitioned => "partitioned",
+            Self::NodeDown => "node-down",
+        })
+    }
+}
+
+/// One line per entry, such as `t=3 send 0->1 #4`.
+impl fmt::Display for Trace {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for entry in &self.entries {
+            writeln!(f, "{entry}")?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Display for TraceEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Send { at, from, to, msg } => {
+                write!(
+                    f,
+                    "t={} send {}->{} #{}",
+                    at.ticks(),
+                    from.get(),
+                    to.get(),
+                    msg.get()
+                )
+            }
+            Self::Deliver { at, from, to, msg } => {
+                write!(
+                    f,
+                    "t={} deliver {}->{} #{}",
+                    at.ticks(),
+                    from.get(),
+                    to.get(),
+                    msg.get()
+                )
+            }
+            Self::Drop { at, msg, reason } => {
+                write!(f, "t={} drop #{} {reason}", at.ticks(), msg.get())
+            }
+            Self::Request { at, to, msg } => {
+                write!(f, "t={} request ->{} #{}", at.ticks(), to.get(), msg.get())
+            }
+            Self::Timer { at, node, tag } => {
+                write!(f, "t={} timer {} tag={tag}", at.ticks(), node.get())
+            }
+            Self::Fault { at, fault } => write!(f, "t={} {fault}", at.ticks()),
+        }
+    }
+}
+
 fn encode_entry(entry: &TraceEntry, out: &mut Vec<u8>) {
     let mut put = |word: u64| out.extend_from_slice(&word.to_le_bytes());
     match entry {
@@ -128,6 +195,12 @@ fn encode_entry(entry: &TraceEntry, out: &mut Vec<u8>) {
                 DropReason::Partitioned => 1,
                 DropReason::NodeDown => 2,
             });
+        }
+        TraceEntry::Request { at, to, msg } => {
+            put(5);
+            put(at.ticks());
+            put(to.get().into());
+            put(msg.get());
         }
         TraceEntry::Timer { at, node, tag } => {
             put(3);

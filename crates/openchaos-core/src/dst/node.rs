@@ -35,6 +35,9 @@ pub trait Node {
     /// Called when a message from `from` arrives and the link is not partitioned.
     fn on_message(&mut self, ctx: &mut Ctx<'_, Self::Msg>, from: NodeId, msg: Self::Msg);
 
+    /// Called when a client request injected with [`crate::Cluster::inject`] arrives.
+    fn on_request(&mut self, _ctx: &mut Ctx<'_, Self::Msg>, _msg: Self::Msg) {}
+
     /// Called when a timer set with [`Ctx::set_timer`] fires on the node's local clock.
     fn on_timer(&mut self, ctx: &mut Ctx<'_, Self::Msg>, tag: u64);
 

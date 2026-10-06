@@ -45,7 +45,7 @@ pub struct NetworkConfig {
     pub reorder: bool,
 }
 
-/// Identity of a sent message. Duplicates share the id of the original.
+/// Identity of a sent message or client request. Duplicates share the id of the original.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MsgId(u64);
 
@@ -54,7 +54,7 @@ impl MsgId {
         Self(id)
     }
 
-    /// Raw id, in send order from 0.
+    /// Raw id, from 0 in the order messages are sent or requests injected.
     #[must_use]
     pub const fn get(self) -> u64 {
         self.0
