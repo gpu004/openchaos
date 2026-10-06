@@ -1,0 +1,20 @@
+#!/bin/sh
+set -eu
+
+subject="$(sed -n '1p' "$1")"
+
+fail() {
+  echo "commit-msg: $1" >&2
+  exit 1
+}
+
+printf '%s' "$subject" | grep -Eq '^(Merge|Revert) ' && exit 0
+
+printf '%s' "$subject" | grep -Eq '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([a-z0-9-]+\))?!?: .+' \
+  || fail "header must match <type>(<scope>): <subject>"
+
+[ "${#subject}" -le 72 ] || fail "subject must be <= 72 characters"
+
+text="$(printf '%s' "$subject" | sed 's/^[^:]*: //')"
+printf '%s' "$text" | cut -c1 | grep -Eq '[A-Z]' || fail "subject must start with a capital letter"
+if printf '%s' "$text" | grep -Eq '\.$'; then fail "subject must not end with a period"; fi
