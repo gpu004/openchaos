@@ -68,8 +68,6 @@ impl<T> Ord for Entry<T> {
     }
 }
 
-/// Event queue that owns the clock. `schedule` rejects times before `now`, so
-/// `pop` can only move `now` forward.
 #[derive(Debug)]
 pub(crate) struct Scheduler<T> {
     now: Clock,

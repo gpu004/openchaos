@@ -18,12 +18,6 @@ impl Clock {
     }
 }
 
-impl From<u64> for Clock {
-    fn from(ticks: u64) -> Self {
-        Self(ticks)
-    }
-}
-
 impl fmt::Display for Clock {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "t={}", self.0)

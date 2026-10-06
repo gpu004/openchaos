@@ -1,5 +1,3 @@
-use std::fmt;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Seed(u64);
 
@@ -35,18 +33,6 @@ fn fnv1a64(bytes: &[u8]) -> u64 {
         hash = hash.wrapping_mul(PRIME);
     }
     hash
-}
-
-impl fmt::Display for Seed {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:#018x}", self.0)
-    }
-}
-
-impl From<u64> for Seed {
-    fn from(value: u64) -> Self {
-        Self(value)
-    }
 }
 
 #[cfg(test)]

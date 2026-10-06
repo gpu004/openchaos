@@ -1,6 +1,6 @@
 use super::seed::Seed;
 
-/// xoshiro128** seeded from a [`Seed`] via SplitMix64.
+/// xoshiro128** seeded from a [`Seed`].
 #[derive(Debug, Clone)]
 pub struct SimRng {
     s: [u32; 4],
