@@ -31,10 +31,7 @@ impl SimRng {
 
     /// Next `u32` from the stream.
     pub fn next_u32(&mut self) -> u32 {
-        let result = self.s[1]
-            .wrapping_mul(5)
-            .rotate_left(7)
-            .wrapping_mul(9);
+        let result = self.s[1].wrapping_mul(5).rotate_left(7).wrapping_mul(9);
         let t = self.s[1] << 9;
 
         self.s[2] ^= self.s[0];
@@ -85,7 +82,7 @@ impl SimRng {
                     l = m as u32;
                 }
             }
-            (m >> 32) as u64
+            m >> 32
         } else {
             loop {
                 let v = self.next_u64();
