@@ -15,8 +15,6 @@
 //! [CodSpeed](https://github.com/CodSpeedHQ/codspeed) (simulation-mode meters).
 //! This crate has **no** Hegel dependency.
 
-#![deny(missing_docs)]
-
 pub mod instrument;
 pub mod sim;
 

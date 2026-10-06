@@ -1,0 +1,25 @@
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+allow-dbg-in-tests = false
+allow-print-in-tests = false
+msrv = "1.86"
+
+disallowed-types = [
+  { path = "std::collections::HashMap", reason = "iteration order is randomized per process; use BTreeMap so sims stay seed-deterministic" },
+  { path = "std::collections::HashSet", reason = "iteration order is randomized per process; use BTreeSet so sims stay seed-deterministic" },
+  { path = "std::collections::hash_map::RandomState", reason = "per-process random hashing breaks seed determinism" },
+  { path = "std::time::Instant", reason = "wall time breaks determinism; use the logical sim Clock" },
+  { path = "std::time::SystemTime", reason = "wall time breaks determinism; use the logical sim Clock" },
+  { path = "std::sync::Mutex", reason = "the sim is single-threaded and deterministic; shared mutable state hides ordering bugs" },
+  { path = "std::sync::RwLock", reason = "the sim is single-threaded and deterministic; shared mutable state hides ordering bugs" },
+]
+
+disallowed-methods = [
+  { path = "std::time::Instant::now", reason = "wall time breaks determinism; use the logical sim Clock" },
+  { path = "std::time::SystemTime::now", reason = "wall time breaks determinism; use the logical sim Clock" },
+  { path = "std::thread::sleep", reason = "real sleeping breaks determinism; schedule an event on SimWorld instead" },
+  { path = "std::thread::spawn", reason = "OS scheduling breaks determinism; model concurrency as SimWorld events" },
+  { path = "std::env::var", reason = "ambient environment makes runs irreproducible; thread config through Seed or explicit arguments" },
+  { path = "std::env::var_os", reason = "ambient environment makes runs irreproducible; thread config through Seed or explicit arguments" },
+]

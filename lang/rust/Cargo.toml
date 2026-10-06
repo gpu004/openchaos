@@ -22,3 +22,6 @@ path = "examples/sim_bench.rs"
 [[example]]
 name = "lru_capacity"
 path = "examples/lru_capacity.rs"
+
+[lints]
+workspace = true

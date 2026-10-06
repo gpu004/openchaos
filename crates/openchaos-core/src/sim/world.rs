@@ -31,6 +31,7 @@ pub struct SimWorld<T> {
 
 impl<T> SimWorld<T> {
     /// Create a world from an explicit seed.
+    #[must_use]
     pub fn new(seed: Seed) -> Self {
         Self {
             seed,
@@ -44,11 +45,13 @@ impl<T> SimWorld<T> {
     }
 
     /// Seed that created this world.
+    #[must_use]
     pub fn seed(&self) -> Seed {
         self.seed
     }
 
     /// Current logical clock.
+    #[must_use]
     pub fn clock(&self) -> Clock {
         self.clock
     }
@@ -59,6 +62,7 @@ impl<T> SimWorld<T> {
     }
 
     /// Shared simulation meter (CodSpeed-inspired logical work counters).
+    #[must_use]
     pub fn meter(&self) -> &Meter {
         &self.meter
     }
@@ -69,16 +73,19 @@ impl<T> SimWorld<T> {
     }
 
     /// Number of events delivered so far.
+    #[must_use]
     pub fn steps(&self) -> u64 {
         self.steps
     }
 
     /// Compact trace of `(logical_time, event_id)` for equality checks.
+    #[must_use]
     pub fn trace(&self) -> &[(u64, EventId)] {
         &self.trace
     }
 
     /// Peek at the next scheduled time/id without delivering.
+    #[must_use]
     pub fn peek_next(&self) -> Option<(Clock, EventId)> {
         self.scheduler.peek()
     }
@@ -96,6 +103,7 @@ impl<T> SimWorld<T> {
     }
 
     /// Pending event count.
+    #[must_use]
     pub fn pending(&self) -> usize {
         self.scheduler.len()
     }

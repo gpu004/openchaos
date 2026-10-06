@@ -3,6 +3,8 @@
 //! Scenario only — not part of openchaos-core depth. Drives core through the
 //! thin `openchaos` language package.
 
+#![expect(clippy::print_stdout, reason = "demo binary reports to stdout")]
+
 use openchaos::{bench_sim, Clock, Seed, SimWorld};
 
 #[derive(Debug)]
