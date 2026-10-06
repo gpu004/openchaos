@@ -16,11 +16,13 @@ pub struct RunLimit {
 
 impl RunLimit {
     /// Limit to at most `max_steps` deliveries.
+    #[must_use]
     pub const fn steps(max_steps: u64) -> Self {
         Self { max_steps }
     }
 
     /// Effectively unbounded for practical scenario sizes.
+    #[must_use]
     pub const fn unlimited() -> Self {
         Self {
             max_steps: u64::MAX,

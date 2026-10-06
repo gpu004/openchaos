@@ -12,8 +12,6 @@
 //! core and this package has nothing useful left. Hand-rolled PBT modules are
 //! intentionally absent — Hegel (`hegeltest` / lib `hegel`) is the PBT interface.
 
-#![deny(missing_docs)]
-
 pub mod bind;
 
 pub use openchaos_core::{
@@ -23,7 +21,6 @@ pub use openchaos_core::{
 
 /// Prelude for Rust callers binding to core through this thin package.
 pub mod prelude {
-    //! Common core types re-exported for ergonomics.
     pub use crate::bind::{draw_seed, draw_seed_max, draw_world, draw_world_max};
     pub use openchaos_core::{
         bench_sim, Clock, EventHandler, EventId, Meter, RegionStats, RunLimit, RunSummary, Seed,

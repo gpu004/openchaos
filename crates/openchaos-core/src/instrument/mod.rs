@@ -7,9 +7,9 @@
 //! Logical counters are hardware-independent. Wall duration on [`SimReport`] is
 //! an optional side channel only — never the simulation metric.
 
+use core::fmt;
+use core::time::Duration;
 use std::collections::BTreeMap;
-use std::fmt;
-use std::time::{Duration, Instant};
 
 /// Per-region logical totals (CodSpeed-like named instrument).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -39,6 +39,7 @@ pub struct Meter {
 
 impl Meter {
     /// Empty meter.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -90,16 +91,18 @@ impl Meter {
     pub fn with_span<R>(&mut self, name: impl Into<String>, f: impl FnOnce(&mut Meter) -> R) -> R {
         self.begin(name);
         let result = f(self);
-        let _ = self.end();
+        let _: bool = self.end();
         result
     }
 
     /// Snapshot of named region stats (sorted by name via [`BTreeMap`]).
+    #[must_use]
     pub fn regions(&self) -> &BTreeMap<String, RegionStats> {
         &self.regions
     }
 
     /// Lookup one region by name.
+    #[must_use]
     pub fn region(&self, name: &str) -> Option<&RegionStats> {
         self.regions.get(name)
     }
@@ -134,14 +137,14 @@ impl fmt::Display for SimReport {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "bench_sim[{}]: steps={} events={} bytes={} spans={} regions={} (wall {:?})",
+            "bench_sim[{}]: steps={} events={} bytes={} spans={} regions={} (wall {}us)",
             self.name,
             self.meter.steps,
             self.meter.events,
             self.meter.bytes,
             self.meter.span_entries,
             self.meter.regions.len(),
-            self.wall
+            self.wall.as_micros()
         )
     }
 }
@@ -166,7 +169,7 @@ impl<'a> Span<'a> {
     /// End early (idempotent with [`Drop`]).
     pub fn end(mut self) {
         if self.active {
-            let _ = self.meter.end();
+            let _: bool = self.meter.end();
             self.active = false;
         }
     }
@@ -175,7 +178,7 @@ impl<'a> Span<'a> {
 impl Drop for Span<'_> {
     fn drop(&mut self) {
         if self.active {
-            let _ = self.meter.end();
+            let _: bool = self.meter.end();
             self.active = false;
         }
     }
@@ -183,7 +186,7 @@ impl Drop for Span<'_> {
 
 /// Run `f` once under simulation metering and return a [`SimReport`].
 ///
-/// Analogous to CodSpeed simulation mode: a single deterministic pass yields
+/// Analogous to `CodSpeed` simulation mode: a single deterministic pass yields
 /// stable logical metrics rather than noisy wall-clock samples.
 pub fn bench_sim<F>(name: impl Into<String>, mut f: F) -> SimReport
 where
@@ -191,7 +194,12 @@ where
 {
     let name = name.into();
     let mut meter = Meter::new();
-    let start = Instant::now();
+    #[expect(
+        clippy::disallowed_methods,
+        clippy::disallowed_types,
+        reason = "wall time is an informational side channel on SimReport, never a sim input"
+    )]
+    let start = std::time::Instant::now();
     f(&mut meter);
     let wall = start.elapsed();
     SimReport { name, meter, wall }

@@ -1,13 +1,7 @@
 [workspace]
 resolver = "2"
-members = [
-    "crates/openchaos-core",
-    "lang/rust",
-]
-default-members = [
-    "crates/openchaos-core",
-    "lang/rust",
-]
+members = ["crates/openchaos-core", "lang/rust"]
+default-members = ["crates/openchaos-core", "lang/rust"]
 
 [workspace.package]
 version = "0.1.0"
@@ -15,3 +9,36 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/gpu004/openchaos"
 rust-version = "1.86"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "deny"
+missing_debug_implementations = "deny"
+unreachable_pub = "deny"
+unused_qualifications = "deny"
+let_underscore_drop = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+allow_attributes = "deny"
+allow_attributes_without_reason = "deny"
+as_conversions = "deny"
+dbg_macro = "deny"
+disallowed_macros = "deny"
+disallowed_methods = "deny"
+disallowed_types = "deny"
+expect_used = "deny"
+get_unwrap = "deny"
+let_underscore_must_use = "deny"
+let_underscore_untyped = "deny"
+panic = "deny"
+print_stderr = "deny"
+print_stdout = "deny"
+std_instead_of_core = "deny"
+todo = "deny"
+undocumented_unsafe_blocks = "deny"
+unimplemented = "deny"
+unwrap_used = "deny"
+use_debug = "deny"
