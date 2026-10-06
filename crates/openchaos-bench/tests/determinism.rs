@@ -5,17 +5,17 @@ use openchaos_bench::{valgrind_version, Report};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+const CLI: &str = env!("CARGO_BIN_EXE_openchaos-bench");
+
 fn example() -> Result<PathBuf> {
-    let deps = std::env::current_exe()?;
-    let profile_dir = deps
+    let profile_dir = Path::new(CLI)
         .parent()
-        .and_then(Path::parent)
-        .context("test binary has no target profile directory")?;
+        .context("openchaos-bench binary has no target profile directory")?;
     Ok(profile_dir.join("examples").join("sim_events"))
 }
 
 fn run(out_dir: &Path) -> Result<Report> {
-    let status = Command::new(env!("CARGO_BIN_EXE_openchaos-bench"))
+    let status = Command::new(CLI)
         .arg("run")
         .arg("--out-dir")
         .arg(out_dir)
