@@ -23,7 +23,11 @@ const VALGRIND_ARGS: &[&str] = &[
     "--dump-line=no",
 ];
 
-/// `valgrind --version`, or an error if Valgrind is not on `PATH`.
+/// `valgrind --version`.
+///
+/// # Errors
+///
+/// Fails if Valgrind is not on `PATH` or `--version` exits non-zero.
 pub fn valgrind_version() -> Result<String> {
     let output = Command::new("valgrind")
         .arg("--version")
@@ -34,11 +38,15 @@ pub fn valgrind_version() -> Result<String> {
 }
 
 /// Run `command` under callgrind and collect the regions marked with
-/// [`crate::bench`] from every traced process.
+/// [`crate::bench()`] from every traced process.
 ///
 /// Profiles and Valgrind logs go to `out_dir`; files left there by a previous
-/// run are deleted first. Fails if the command fails or if two regions share a
-/// name.
+/// run are deleted first.
+///
+/// # Errors
+///
+/// Fails if Valgrind is missing, the command fails (the error carries the
+/// Valgrind logs), a profile cannot be parsed, or two regions share a name.
 pub fn measure(command: &[OsString], out_dir: &Path) -> Result<Report> {
     ensure!(!command.is_empty(), "no command to run");
     let valgrind = valgrind_version()?;
@@ -67,10 +75,11 @@ pub fn measure(command: &[OsString], out_dir: &Path) -> Result<Report> {
         .status()
         .context("failed to start setarch")?;
     if !status.success() {
+        let mut logs = String::new();
         for path in files_with_extension(out_dir, "log")? {
-            eprint!("{}", fs::read_to_string(&path).unwrap_or_default());
+            logs.push_str(&fs::read_to_string(&path)?);
         }
-        bail!("benchmark command failed: {status}");
+        bail!("benchmark command failed: {status}\n{logs}");
     }
 
     let mut benchmarks = BTreeMap::new();
@@ -80,7 +89,7 @@ pub fn measure(command: &[OsString], out_dir: &Path) -> Result<Report> {
         for (name, metrics) in regions {
             ensure!(
                 benchmarks.insert(name.clone(), metrics).is_none(),
-                "benchmark {name:?} was measured more than once"
+                "benchmark `{name}` was measured more than once"
             );
         }
     }

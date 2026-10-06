@@ -1,7 +1,7 @@
 use crate::callgrind::Metrics;
+use core::fmt;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::fmt;
 
 /// Results of one `openchaos-bench run`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -44,6 +44,12 @@ pub struct Change {
 
 impl Change {
     /// Relative change from base to head, in percent.
+    #[must_use]
+    #[expect(
+        clippy::cast_precision_loss,
+        clippy::as_conversions,
+        reason = "cycle counts stay far below 2^52 and the percentage is only compared to a threshold"
+    )]
     pub fn percent(&self) -> f64 {
         if self.base == self.head {
             return 0.0;
@@ -65,6 +71,7 @@ pub struct Comparison {
 
 impl Comparison {
     /// Changes whose estimated cycles grew by more than `threshold_percent`.
+    #[must_use]
     pub fn regressions(&self, threshold_percent: f64) -> Vec<&Change> {
         self.changes
             .iter()
@@ -102,6 +109,7 @@ impl fmt::Display for Comparison {
 }
 
 /// Pair up the benchmarks of `base` and `head` by name.
+#[must_use]
 pub fn compare(base: &Report, head: &Report) -> Comparison {
     let changes = base
         .benchmarks

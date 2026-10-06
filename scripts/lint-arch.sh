@@ -67,6 +67,13 @@ rust_files | grep -v '/tests/' | while IFS= read -r file; do
   fi
 done
 
+# 6) Unsafe code lives only in the Valgrind client-request shim.
+rust_files | grep -v '^crates/openchaos-bench/src/hooks.rs$' | xargs grep -nE '\bunsafe\b' 2>/dev/null | while IFS=: read -r file line _; do
+  report "$file" "$line" \
+    "unsafe outside crates/openchaos-bench/src/hooks.rs." \
+    "Use a safe API; only the Valgrind client-request asm needs unsafe."
+done
+
 count=$(wc -l <"$VIOLATIONS" | tr -d ' ')
 if [ "$count" -gt 0 ]; then
   printf '\nlint-arch: %s violation(s)\n' "$count"

@@ -16,7 +16,7 @@ Install Valgrind (`sudo apt-get install valgrind`), then mark the code to
 measure:
 
 ```rust
-let delivered = openchaos_bench::bench("sim_world/10000_events", || run_events(10_000));
+let delivered = openchaos_bench::bench(c"sim_world/10000_events", || run_events(10_000));
 ```
 
 Outside Valgrind, `bench` only calls the closure. Run the program under the

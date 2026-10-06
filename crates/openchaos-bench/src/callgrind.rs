@@ -36,14 +36,16 @@ impl Metrics {
         let accesses = instructions + get("Dr") + get("Dw");
         let l1_misses = get("I1mr") + get("D1mr") + get("D1mw");
         let ram_hits = get("ILmr") + get("DLmr") + get("DLmw");
-        let l1_hits = accesses - l1_misses;
-        let ll_hits = l1_misses - ram_hits;
+        let served_by_l1 = accesses.saturating_sub(l1_misses);
+        let served_by_last_level = l1_misses.saturating_sub(ram_hits);
         Self {
             instructions,
-            l1_hits,
-            ll_hits,
+            l1_hits: served_by_l1,
+            ll_hits: served_by_last_level,
             ram_hits,
-            estimated_cycles: l1_hits + LL_HIT_CYCLES * ll_hits + RAM_HIT_CYCLES * ram_hits,
+            estimated_cycles: served_by_l1
+                + LL_HIT_CYCLES * served_by_last_level
+                + RAM_HIT_CYCLES * ram_hits,
         }
     }
 }
@@ -51,7 +53,7 @@ impl Metrics {
 /// Extract the benchmark regions from a callgrind profile written with
 /// `--combine-dumps=yes`.
 ///
-/// Each part dumped by [`crate::bench`] becomes one `(name, metrics)` entry,
+/// Each part dumped by [`crate::bench()`] becomes one `(name, metrics)` entry,
 /// in file order. Parts with any other trigger, such as program termination,
 /// are skipped.
 pub(crate) fn parse_profile(text: &str) -> Result<Vec<(String, Metrics)>> {
@@ -68,13 +70,13 @@ pub(crate) fn parse_profile(text: &str) -> Result<Vec<(String, Metrics)>> {
         } else if let Some(totals) = line.strip_prefix("totals:") {
             let Some(name) = name.take() else { continue };
             if events.is_empty() {
-                bail!("part {name:?} has totals before an events line");
+                bail!("part `{name}` has totals before an events line");
             }
             let values = totals
                 .split_whitespace()
                 .map(str::parse)
                 .collect::<Result<Vec<u64>, _>>()
-                .with_context(|| format!("bad totals line for {name:?}: {totals}"))?;
+                .with_context(|| format!("bad totals line for `{name}`: {totals}"))?;
             regions.push((name.to_owned(), Metrics::from_events(&events, &values)));
         }
     }

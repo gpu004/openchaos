@@ -1,7 +1,5 @@
 //! Deterministic benchmarks: run a program under callgrind, collect the
-//! regions it marks with [`bench`], and compare reports.
-
-#![deny(missing_docs)]
+//! regions it marks with [`bench()`], and compare reports.
 
 mod callgrind;
 mod hooks;

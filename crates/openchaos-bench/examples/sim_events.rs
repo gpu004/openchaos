@@ -1,3 +1,6 @@
+//! Benchmarks `SimWorld` delivering a fixed number of events.
+
+use core::ffi::CStr;
 use openchaos_bench::bench;
 use openchaos_core::{Seed, SimWorld};
 
@@ -16,9 +19,13 @@ fn run_events(initial: u64) -> u64 {
         .delivered
 }
 
+const CASES: [(&CStr, u64); 2] = [
+    (c"sim_world/1000_events", 1_000),
+    (c"sim_world/10000_events", 10_000),
+];
+
 fn main() {
-    for events in [1_000, 10_000] {
-        let delivered = bench(&format!("sim_world/{events}_events"), || run_events(events));
-        println!("{events} initial events, {delivered} delivered");
+    for (name, events) in CASES {
+        bench(name, || run_events(events));
     }
 }

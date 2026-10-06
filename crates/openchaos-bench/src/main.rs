@@ -1,3 +1,5 @@
+//! `openchaos-bench` CLI: `run` a command under callgrind, `compare` two reports.
+
 use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
 use openchaos_bench::{compare, measure, Report};
@@ -25,7 +27,9 @@ enum Cmd {
     },
     /// Compare two reports; fail if a benchmark regressed.
     Compare {
+        /// Report of the baseline revision.
         base: PathBuf,
+        /// Report of the revision under test.
         head: PathBuf,
         /// Maximum allowed growth in estimated cycles, in percent.
         #[arg(long, default_value_t = 1.0)]
@@ -33,6 +37,11 @@ enum Cmd {
     },
 }
 
+#[expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    reason = "the CLI reports its results on the terminal"
+)]
 fn main() -> Result<()> {
     match Cli::parse().command {
         Cmd::Run { out_dir, command } => {

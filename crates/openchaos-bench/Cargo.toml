@@ -17,3 +17,6 @@ serde_json = "1"
 
 [dev-dependencies]
 openchaos-core = { path = "../openchaos-core" }
+
+[lints]
+workspace = true
