@@ -48,3 +48,4 @@ Skills live in `.agents/skills/`. Run them on every change, not only when asked:
 | Any prose you write: README, PR descriptions, doc comments | `unslop` |
 | The operator corrects a mistake an agent already made once | `correct` |
 | Questions about how or why existing code works | `how`, `why` |
+| On request only: generate or audit the repo's `verify-<app>` skill | `create-verification-skill`, `maintain-verification-skill` |
